@@ -17,7 +17,7 @@ export default function expressQws(app?: Express): QwsApplication {
     appWs.ws(route, (ws: WebSocket, req?: Request) => {
       try {
         const qws = new QWebSocket(ws, {
-          name: req.path,
+          name: req.url,
           reconnect: false, // do not reconnect on server-side
         });
         handler(qws, req);

@@ -23,7 +23,8 @@
     "lint": "eslint 'src/**/*.{js,ts,jsx,tsx}' --quiet --fix",
     "example:wsmessage": "nodemon examples/wsmessage.ts",
     "example:broadcaster": "nodemon examples/broadcaster.ts",
-    "example:expressqws": "nodemon examples/expressqws.ts"
+    "example:serverws": "nodemon examples/serverws.ts",
+    "example:serverexpress": "nodemon examples/serverexpress.ts"
   },
   "dependencies": {
     "auto-bind": "^4.0.0",
