@@ -3,11 +3,23 @@ import { IncomingMessage } from 'http';
 
 import QWebSocket from '../common/queuews';
 
-export default class QWebSocketServer extends WebSocket.Server {
-  callback: (ws: QWebSocket, req?: IncomingMessage) => void;
+/**
+ * Callback function type
+ */
+export type ConnectionCallback = (qws: QWebSocket, req?: IncomingMessage) => void | number | Promise<void> | Promise<number>;
 
-  constructor(options?: ServerOptions, callback?: () => void) {
-    super(options, callback);
+/**
+ * Wrapper around WebSocket server provided by the ws package.
+ * Allows building up QWebSocket objects on connect.
+ */
+export default class QWebSocketServer extends WebSocket.Server {
+  /**
+   * callback for connection, provided by the client
+   */
+  private callback?: ConnectionCallback;
+
+  constructor(options?: ServerOptions) {
+    super(options);
 
     this.on('connection', (ws: WebSocket, req?: IncomingMessage) => {
       try {
@@ -16,9 +28,11 @@ export default class QWebSocketServer extends WebSocket.Server {
           reconnect: false, // do not reconnect on server-side
         });
 
-        this.callback?.(qws, req);
+        // set current callback
+        qws.onConnect(() => this.callback?.(qws, req));
 
         // re-emit open event, since original consumed by express-ws
+        // this will trigger the callback correctly
         ws.emit('open');
       } catch (err) {
         console.error(err);
@@ -27,7 +41,10 @@ export default class QWebSocketServer extends WebSocket.Server {
     });
   }
 
-  onConnection(callback: (ws: QWebSocket, req?: IncomingMessage) => void): void {
+  /**
+   * Set callback for connection
+   */
+  onConnection(callback: ConnectionCallback): void {
     this.callback = callback;
   }
 }

@@ -2,7 +2,7 @@ import QWebSocket, { QWebSocketServer } from '../src';
 
 const qwss = new QWebSocketServer({ port: 3000 });
 
-qwss.onConnection(async (qws: QWebSocket): Promise<void> => {
+qwss.onConnection((qws: QWebSocket) => {
   console.info('ws connected');
 
   qws.onJson((data: Record<string, unknown>, headers: Record<string, unknown>) => {
