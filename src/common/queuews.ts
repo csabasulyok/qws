@@ -1,5 +1,5 @@
 import autoBind from 'auto-bind';
-import WebSocket from 'ws';
+import WebSocket, { ClientOptions } from 'ws';
 
 import { Binary } from './discriminator';
 import {
@@ -12,6 +12,7 @@ import {
   QwsMessageExtraHeaders,
   BinaryQwsMessageHeaders,
   JsonQwsMessageHeaders,
+  ReadyQwsMessageHeaders,
 } from './message';
 import WebSocketMessageQueue from './queue';
 import WrappedWebSocket from '../node/wrappedws';
@@ -33,7 +34,8 @@ const decodeErrorMessage = (event): string => {
  */
 export type ConnectCallback = () => void | number | Promise<void> | Promise<number>;
 export type BinCallback = (body: Binary, headers?: BinaryQwsMessageHeaders) => void | Promise<void>;
-export type JsonCallback = (body: Record<string, unknown>, headers?: JsonQwsMessageHeaders) => void | Promise<void>;
+export type JsonCallback<T> = (body: T, headers?: JsonQwsMessageHeaders) => void | Promise<void>;
+export type ReadyCallback = (headers?: ReadyQwsMessageHeaders) => void | Promise<void>;
 
 /**
  * Connection options
@@ -44,6 +46,7 @@ type QWebSocketOptions = {
   reconnect?: boolean;
   reconnectNumTries?: number;
   reconnectIntervalMillis?: number;
+  webSocketOpts?: ClientOptions;
 };
 
 const defaultOpts: Partial<QWebSocketOptions> = {
@@ -70,7 +73,9 @@ export default class QWebSocket {
   callbacks: {
     onConnect?: ConnectCallback;
     onBin?: BinCallback;
-    onJson?: JsonCallback;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onJson?: JsonCallback<any>;
+    onReady?: ReadyCallback;
     onErroneousDisconnect?: (message: string) => void;
     onError?: (message: string) => void;
     onClose?: () => void;
@@ -108,8 +113,12 @@ export default class QWebSocket {
     this.callbacks.onBin = callback;
   }
 
-  onJson(callback: JsonCallback): void {
+  onJson<T>(callback: JsonCallback<T>): void {
     this.callbacks.onJson = callback;
+  }
+
+  onReady(callback: ReadyCallback): void {
+    this.callbacks.onReady = callback;
   }
 
   onErroneousDisconnect(callback: () => void): void {
@@ -149,7 +158,7 @@ export default class QWebSocket {
      */
     if (this.wsOrUrl instanceof WebSocket || this.wsOrUrl?.constructor?.name === 'WebSocket') {
       const ws = this.wsOrUrl as WebSocket;
-      this.wws = new WrappedWebSocket(ws);
+      this.wws = new WrappedWebSocket(ws, this.options.webSocketOpts);
       // TODO what if this is a reconnect? No reconnection was attempted, it's just the old reference
     } else {
       const connectUrl = addQueryParamsToUrl(this.wsOrUrl, {
@@ -163,7 +172,12 @@ export default class QWebSocket {
       // ws error will prompt reconnection which can time out, don't reject instantly
       const message = decodeErrorMessage(event);
       console.error(`${this.name}: WS error occurred: ${message}`);
-      this.callbacks.onErroneousDisconnect?.(message);
+
+      if (reconnect) {
+        this.callbacks.onErroneousDisconnect?.(message);
+      } else {
+        this.callbacks.onError?.(message);
+      }
     });
 
     this.wws.onWsOpen(async () => {
@@ -196,7 +210,7 @@ export default class QWebSocket {
       }
     });
 
-    this.wws.onReady((message: ReadyQwsMessage) => {
+    this.wws.onReady(async (message: ReadyQwsMessage) => {
       // ready to send messages from given message index
       const { readyIdx } = message.headers;
       console.log(`${this.name}: Socket ready to send from chunk ${readyIdx}`);
@@ -206,6 +220,19 @@ export default class QWebSocket {
       this.ready = true;
       // flush if any messages in queue for it
       this.flush();
+
+      try {
+        // call post-ready method
+        await this.callbacks.onReady?.(message.headers);
+      } catch (err) {
+        // error occurred during initialization phase, send error right away, no "ready" message
+        this.wws.send({
+          headers: {
+            type: 'err',
+            error: decodeErrorMessage(err),
+          },
+        } as ErrorQwsMessage);
+      }
     });
 
     this.wws.onBin(async (message: BinaryQwsMessage) => {

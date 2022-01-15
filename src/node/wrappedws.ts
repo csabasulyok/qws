@@ -1,5 +1,5 @@
 import autoBind from 'auto-bind';
-import WebSocket, { MessageEvent, Event } from 'ws';
+import WebSocket, { MessageEvent, Event, ClientOptions } from 'ws';
 
 import { QwsMessage, AckQwsMessage, BinaryQwsMessage, ErrorQwsMessage, JsonQwsMessage, ReadyQwsMessage } from '../common/message';
 import { deserializeMessage, serializeMessage } from './messageencode';
@@ -20,10 +20,14 @@ export default class WrappedWebSocket {
     err?: (message: ErrorQwsMessage) => void;
   };
 
-  constructor(wsOrUrl: WebSocket | string) {
+  constructor(wsOrUrl: WebSocket | string, opts?: ClientOptions) {
     this.callbacks = {};
 
-    this.ws = wsOrUrl instanceof WebSocket || wsOrUrl?.constructor?.name === 'WebSocket' ? (wsOrUrl as WebSocket) : new WebSocket(wsOrUrl);
+    if (wsOrUrl instanceof WebSocket || wsOrUrl?.constructor?.name === 'WebSocket') {
+      this.ws = wsOrUrl as WebSocket;
+    } else {
+      this.ws = new WebSocket(wsOrUrl, opts);
+    }
 
     this.ws.onmessage = async (event: MessageEvent) => {
       const message = await deserializeMessage(event.data as Buffer);
