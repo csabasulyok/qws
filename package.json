@@ -30,6 +30,7 @@
     "auto-bind": "^4.0.0",
     "express": "^4.17.2",
     "express-ws": "^5.0.2",
+    "route-recognizer": "^0.3.4",
     "ws": "^8.4.0"
   },
   "devDependencies": {

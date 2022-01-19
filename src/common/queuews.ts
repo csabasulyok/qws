@@ -1,5 +1,6 @@
 import autoBind from 'auto-bind';
 import WebSocket, { ClientOptions } from 'ws';
+import RouteRecognizer, { Params } from 'route-recognizer';
 
 import { Binary } from './discriminator';
 import {
@@ -33,8 +34,8 @@ const decodeErrorMessage = (event): string => {
  * Callback types
  */
 export type ConnectCallback = () => void | number | Promise<void> | Promise<number>;
-export type BinCallback = (body: Binary, headers?: BinaryQwsMessageHeaders) => void | Promise<void>;
-export type JsonCallback<T> = (body: T, headers?: JsonQwsMessageHeaders) => void | Promise<void>;
+export type BinCallback = (body: Binary, headers?: BinaryQwsMessageHeaders, params?: Params) => void | Promise<void>;
+export type JsonCallback<T> = (body: T, headers?: JsonQwsMessageHeaders, params?: Params) => void | Promise<void>;
 export type ReadyCallback = (headers?: ReadyQwsMessageHeaders) => void | Promise<void>;
 
 /**
@@ -72,9 +73,8 @@ export default class QWebSocket {
 
   callbacks: {
     onConnect?: ConnectCallback;
-    onBin?: BinCallback;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onJson?: JsonCallback<any>;
+    onBin: RouteRecognizer;
+    onJson: RouteRecognizer;
     onReady?: ReadyCallback;
     onErroneousDisconnect?: (message: string) => void;
     onError?: (message: string) => void;
@@ -89,7 +89,10 @@ export default class QWebSocket {
     };
 
     this.name = options.name || 'websocket';
-    this.callbacks = {};
+    this.callbacks = {
+      onBin: new RouteRecognizer(),
+      onJson: new RouteRecognizer(),
+    };
 
     this.queue = new WebSocketMessageQueue();
     this.reconnectionAttempts = 0;
@@ -109,12 +112,20 @@ export default class QWebSocket {
     this.callbacks.onConnect = callback;
   }
 
+  onBinRoute(routePattern: string, callback: BinCallback): void {
+    this.callbacks.onBin.add([{ path: routePattern as string, handler: callback }]);
+  }
+
   onBin(callback: BinCallback): void {
-    this.callbacks.onBin = callback;
+    this.onBinRoute('/', callback);
+  }
+
+  onJsonRoute<T>(routePattern: string, callback: JsonCallback<T>): void {
+    this.callbacks.onJson.add([{ path: routePattern as string, handler: callback }]);
   }
 
   onJson<T>(callback: JsonCallback<T>): void {
-    this.callbacks.onJson = callback;
+    this.onJsonRoute('/', callback);
   }
 
   onReady(callback: ReadyCallback): void {
@@ -241,7 +252,11 @@ export default class QWebSocket {
 
       try {
         // check callback
-        await this.callbacks.onBin?.(body, headers);
+        const routeResults = this.callbacks.onBin.recognize(headers.route || '/');
+        if (routeResults) {
+          const { handler, params } = routeResults[0];
+          await (handler as BinCallback)?.(body, headers, params);
+        }
 
         // send back acknowledgment
         this.wws.send({
@@ -267,7 +282,11 @@ export default class QWebSocket {
 
       try {
         // check callback
-        await this.callbacks.onJson?.(body, headers);
+        const routeResults = this.callbacks.onJson.recognize(headers.route || '/');
+        if (routeResults) {
+          const { handler, params } = routeResults[0];
+          await (handler as JsonCallback<unknown>)?.(body, headers, params);
+        }
 
         // send back acknowledgment
         this.wws.send({
@@ -350,6 +369,10 @@ export default class QWebSocket {
   }
 
   send(body: Binary | Record<string, unknown>, extraHeaders: QwsMessageExtraHeaders = {}): number {
+    return this.sendToRoute(undefined, body, extraHeaders);
+  }
+
+  sendToRoute(route: string, body: Binary | Record<string, unknown>, extraHeaders: QwsMessageExtraHeaders = {}): number {
     // encode into payload message based on body type
     let message: PayloadQwsMessage;
 
@@ -357,6 +380,7 @@ export default class QWebSocket {
       message = {
         headers: {
           type: 'bin',
+          route,
           ...extraHeaders,
         },
         body,
@@ -365,6 +389,7 @@ export default class QWebSocket {
       message = {
         headers: {
           type: 'json',
+          route,
           ...extraHeaders,
         },
         body,
