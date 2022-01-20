@@ -1,16 +1,28 @@
-import WebSocket, { ServerOptions } from 'ws';
 import { IncomingMessage } from 'http';
 import { Duplex } from 'stream';
-import RouteRecognizer, { Params } from 'route-recognizer';
+import WebSocket, { ServerOptions } from 'ws';
+import autoBind from 'auto-bind';
+import RouteRecognizer from 'route-recognizer';
 
 import QWebSocket from '../common/queuews';
+import { QwsParams } from '../common/message';
+
+/**
+ * Path parameters of routing
+ * amended with query string
+ */
+export type QwsUrlParams = QwsParams & {
+  queryParams: {
+    [key: string]: string;
+  };
+};
 
 /**
  * Callback function type
  */
 export type ConnectionCallback = (
   qws: QWebSocket,
-  params?: Params,
+  params?: QwsUrlParams,
   req?: IncomingMessage,
 ) => void | number | Promise<void> | Promise<number>;
 
@@ -20,7 +32,7 @@ export type ConnectionCallback = (
  */
 type DecoratedIncomingMessage = IncomingMessage & {
   handler: ConnectionCallback;
-  params: Params;
+  params: QwsUrlParams;
 };
 
 /**
@@ -37,6 +49,7 @@ export default class QWebSocketServer extends WebSocket.Server {
   constructor(options?: ServerOptions) {
     super(options);
     this.router = new RouteRecognizer();
+    autoBind(this);
   }
 
   /**
@@ -53,9 +66,11 @@ export default class QWebSocketServer extends WebSocket.Server {
       return false;
     }
     // save handler and params
-    const { handler, params } = routeResults[0];
-    req.handler = handler as ConnectionCallback;
-    req.params = params;
+    req.handler = routeResults[0].handler as ConnectionCallback;
+    req.params = {
+      ...routeResults[0].params,
+      queryParams: routeResults.queryParams,
+    } as QwsUrlParams;
     return true;
   }
 
@@ -93,7 +108,6 @@ export default class QWebSocketServer extends WebSocket.Server {
   //
 
   onRoute(routePattern: string, callback: ConnectionCallback): void {
-    console.log(routePattern, 'routed');
     this.router.add([
       {
         path: routePattern,
@@ -104,5 +118,21 @@ export default class QWebSocketServer extends WebSocket.Server {
 
   onConnection(callback: ConnectionCallback): void {
     this.onRoute('*', callback);
+  }
+
+  //
+  // Promisified super close
+  //
+
+  close(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      super.close((err?: Error) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
   }
 }

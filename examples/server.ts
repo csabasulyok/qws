@@ -1,9 +1,8 @@
-import { Params } from 'route-recognizer';
-import QWebSocket, { QWebSocketServer } from '../src';
+import QWebSocket, { QWebSocketServer, QwsUrlParams } from '../src';
 
 const qwss = new QWebSocketServer({ port: 3000 });
 
-qwss.onRoute('/mypath/:name', (qws: QWebSocket, params: Params) => {
+qwss.onRoute('/mypath/:name', (qws: QWebSocket, params: QwsUrlParams) => {
   console.log('ws connected with params', params);
 
   qws.onJson((data: Record<string, unknown>, headers: Record<string, unknown>) => {
