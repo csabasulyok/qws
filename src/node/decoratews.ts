@@ -27,6 +27,11 @@ export type ConnectionCallback = (
 ) => void | number | Promise<void> | Promise<number>;
 
 /**
+ * Middleware callback function type
+ */
+export type BeforeConnectCallback = (req: IncomingMessage, params?: QwsUrlParams) => boolean | Promise<boolean>;
+
+/**
  * Decorated incoming HTTP message
  * Allows setting callback and params in shouldHandle middleware
  */
@@ -45,6 +50,7 @@ export default class QWebSocketServer extends WebSocket.Server {
    * callbacks held per route
    */
   private router: RouteRecognizer;
+  private beforeConnectCallback?: BeforeConnectCallback;
 
   constructor(options?: ServerOptions) {
     super(options);
@@ -71,6 +77,12 @@ export default class QWebSocketServer extends WebSocket.Server {
       ...routeResults[0].params,
       queryParams: routeResults.queryParams,
     } as QwsUrlParams;
+
+    // check middleware if set
+    if (this.beforeConnectCallback) {
+      return this.beforeConnectCallback(req, req.params);
+    }
+
     return true;
   }
 
@@ -80,7 +92,6 @@ export default class QWebSocketServer extends WebSocket.Server {
    */
   handleUpgrade(req: DecoratedIncomingMessage, socket: Duplex, head: Buffer, callback: (ws, request) => void): void {
     super.handleUpgrade(req, socket, head, (ws, request) => {
-      console.log('handleupgrade');
       try {
         const qws = new QWebSocket(ws, {
           name: req.url,
@@ -118,6 +129,10 @@ export default class QWebSocketServer extends WebSocket.Server {
 
   onConnection(callback: ConnectionCallback): void {
     this.onRoute('*', callback);
+  }
+
+  beforeConnect(callback: BeforeConnectCallback): void {
+    this.beforeConnectCallback = callback;
   }
 
   //
