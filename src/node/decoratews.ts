@@ -1,5 +1,6 @@
 import { IncomingMessage } from 'http';
 import { Duplex } from 'stream';
+import { promisify } from 'util';
 import WebSocket, { ServerOptions } from 'ws';
 import autoBind from 'auto-bind';
 import RouteRecognizer from 'route-recognizer';
@@ -47,14 +48,24 @@ type DecoratedIncomingMessage = IncomingMessage & {
  */
 export default class QWebSocketServer extends WebSocket.Server {
   /**
-   * callbacks held per route
+   * routes for callbacks
    */
   private router: RouteRecognizer;
+
+  /**
+   * Callback for check middleware
+   */
   private beforeConnectCallback?: BeforeConnectCallback;
+
+  /**
+   * Set of connections
+   */
+  private wsToQws: Map<WebSocket, QWebSocket>;
 
   constructor(options?: ServerOptions) {
     super(options);
     this.router = new RouteRecognizer();
+    this.wsToQws = new Map<WebSocket, QWebSocket>();
     autoBind(this);
   }
 
@@ -93,9 +104,18 @@ export default class QWebSocketServer extends WebSocket.Server {
   handleUpgrade(req: DecoratedIncomingMessage, socket: Duplex, head: Buffer, callback: (ws, request) => void): void {
     super.handleUpgrade(req, socket, head, (ws, request) => {
       try {
+        const name = new URL(req.url, `http://${req.headers.host}`).pathname;
         const qws = new QWebSocket(ws, {
-          name: req.url,
+          name,
           reconnect: false, // do not reconnect on server-side
+        });
+
+        // map ws to qws for later event wrapping
+        this.wsToQws.set(ws, qws);
+        console.log(`WS open, now maintaining ${this.wsToQws.size} connections`);
+        ws.on('close', () => {
+          this.wsToQws.delete(ws);
+          console.log(`WS closed, now maintaining ${this.wsToQws.size} connections`);
         });
 
         // set current connection callback
@@ -139,15 +159,11 @@ export default class QWebSocketServer extends WebSocket.Server {
   // Promisified super close
   //
 
-  close(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      super.close((err?: Error) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
-    });
+  async closeAsync(): Promise<void> {
+    // take all qws through super client mapping, and close them
+    await Promise.all([...this.clients].map((ws) => this.wsToQws.get(ws)?.close()));
+    // promisify original close method
+    const closeP = promisify(this.close.bind(this));
+    await closeP();
   }
 }
