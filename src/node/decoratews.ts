@@ -7,6 +7,7 @@ import RouteRecognizer from 'route-recognizer';
 
 import QWebSocket from '../common/queuews';
 import { QwsParams } from '../common/message';
+import logger from '../common/logger';
 
 /**
  * Path parameters of routing
@@ -112,10 +113,10 @@ export default class QWebSocketServer extends WebSocket.Server {
 
         // map ws to qws for later event wrapping
         this.wsToQws.set(ws, qws);
-        console.log(`WS open, now maintaining ${this.wsToQws.size} connections`);
+        logger.info(`WS open, now maintaining ${this.wsToQws.size} connections`);
         ws.on('close', () => {
           this.wsToQws.delete(ws);
-          console.log(`WS closed, now maintaining ${this.wsToQws.size} connections`);
+          logger.info(`WS closed, now maintaining ${this.wsToQws.size} connections`);
         });
 
         // set current connection callback
@@ -128,7 +129,7 @@ export default class QWebSocketServer extends WebSocket.Server {
         // this will trigger the callback correctly
         ws.emit('open');
       } catch (err) {
-        console.error(err);
+        logger.error(err);
         throw err;
       }
     });
