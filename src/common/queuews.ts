@@ -171,14 +171,14 @@ export default class QWebSocket {
      */
     if (this.wsOrUrl instanceof WebSocket || this.wsOrUrl?.constructor?.name === 'WebSocket') {
       const ws = this.wsOrUrl as WebSocket;
-      this.wws = new WrappedWebSocket(ws, this.options.webSocketOpts);
+      this.wws = new WrappedWebSocket(ws);
       // TODO what if this is a reconnect? No reconnection was attempted, it's just the old reference
     } else {
       const connectUrl = addQueryParamsToUrl(this.wsOrUrl, {
         ...extraConnectArgs,
         idx: this.queue.ackIdx,
       });
-      this.wws = new WrappedWebSocket(connectUrl);
+      this.wws = new WrappedWebSocket(connectUrl, this.options.webSocketOpts);
     }
 
     this.wws.onWsError(async (event) => {
