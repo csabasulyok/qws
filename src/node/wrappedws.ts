@@ -1,5 +1,5 @@
 import autoBind from 'auto-bind';
-import WebSocket, { MessageEvent, Event, ClientOptions } from 'ws';
+import WebSocket, { MessageEvent, ClientOptions } from 'ws';
 
 import { QwsMessage, AckQwsMessage, BinaryQwsMessage, ErrorQwsMessage, JsonQwsMessage, ReadyQwsMessage } from '../common/message';
 import { deserializeMessage, serializeMessage } from './messageencode';
@@ -51,7 +51,7 @@ export default class WrappedWebSocket {
     this.ws.onclose = callback;
   }
 
-  onWsError(callback: (event: Event) => void): void {
+  onWsError(callback: (event: unknown) => void): void {
     this.ws.onerror = callback;
   }
 
