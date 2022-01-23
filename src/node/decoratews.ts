@@ -74,7 +74,7 @@ export default class QWebSocketServer extends WebSocket.Server {
    * Override whether WS should be handled.
    * Check if route is mapped correctly.
    */
-  shouldHandle(req: DecoratedIncomingMessage): boolean | Promise<boolean> {
+  shouldHandle(req: DecoratedIncomingMessage): boolean {
     if (!super.shouldHandle(req)) {
       return false;
     }
@@ -90,11 +90,6 @@ export default class QWebSocketServer extends WebSocket.Server {
       queryParams: routeResults.queryParams,
     } as QwsUrlParams;
 
-    // check middleware if set
-    if (this.beforeConnectCallback) {
-      return this.beforeConnectCallback(req, req.params);
-    }
-
     return true;
   }
 
@@ -102,7 +97,17 @@ export default class QWebSocketServer extends WebSocket.Server {
    * Override handling of WebSocket upgrade process.
    * If route is valid, handle connection and emit open event.
    */
-  handleUpgrade(req: DecoratedIncomingMessage, socket: Duplex, head: Buffer, callback: (ws, request) => void): void {
+  async handleUpgrade(req: DecoratedIncomingMessage, socket: Duplex, head: Buffer, callback: (ws, request) => void): Promise<void> {
+    // check if pre-connect middleware is set
+    if (this.beforeConnectCallback) {
+      const shouldUpgrade = await this.beforeConnectCallback(req, req.params);
+      if (!shouldUpgrade) {
+        socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+    }
+
     super.handleUpgrade(req, socket, head, (ws, request) => {
       try {
         const name = new URL(req.url, `http://${req.headers.host}`).pathname;
