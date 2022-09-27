@@ -1,11 +1,11 @@
 {
   "name": "qws-node",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "description": "Safe queueing with auto-reconnect for WebSockets",
   "author": "Csaba Sulyok <csaba.sulyok@gmail.com>",
   "license": "ISC",
-  "types": "./dist/index.d.ts",
-  "main": "./dist/index.js",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "files": [
     "dist"
   ],
@@ -14,38 +14,43 @@
     "url": "git+https://github.com/csabasulyok/qws.git"
   },
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
   },
   "scripts": {
     "clean": "rimraf dist *.tsbuildinfo",
     "build": "tsc -p tsconfig.build.json",
     "cb": "pnpm clean && pnpm build",
-    "lint": "eslint 'src/**/*.{js,ts,jsx,tsx}' --quiet --fix",
-    "example:wsmessage": "nodemon examples/wsmessage.ts",
-    "example:broadcaster": "nodemon examples/broadcaster.ts",
-    "example:server": "nodemon examples/server.ts"
+    "lint": "eslint 'src/**/*.ts' --quiet --fix",
+    "format": "prettier --write '**/*.ts' --config ./.prettierrc.yml",
+    "ci": "pnpm lint && pnpm format && pnpm build",
+    "publish:local": "pnpm publish --verbose --registry=http://localhost:8081/repository/npm-releases/",
+    "publish:npmjs": "pnpm publish --verbose --registry=https://registry.npmjs.org/",
+    "example:wsmessage": "ts-node examples/wsmessage.ts",
+    "example:broadcaster": "ts-node examples/broadcaster.ts",
+    "example:server": "ts-node examples/server.ts"
   },
   "dependencies": {
-    "auto-bind": "^4.0.0",
-    "route-recognizer": "^0.3.4",
-    "ws": "^8.4.0"
+    "auto-bind": "4.0.0",
+    "route-recognizer": "0.3.4",
+    "ws": "8.9.0"
   },
   "devDependencies": {
-    "@types/node": "^16.7.1",
-    "@types/ws": "^8.2.2",
-    "@typescript-eslint/eslint-plugin": "^4.29.3",
-    "@typescript-eslint/parser": "^4.29.3",
-    "eslint": "^7.32.0",
-    "eslint-config-airbnb": "^18.2.1",
-    "eslint-config-prettier": "^8.3.0",
-    "eslint-import-resolver-typescript": "^2.4.0",
-    "eslint-plugin-import": "^2.24.1",
-    "eslint-plugin-prettier": "^3.4.1",
-    "nodemon": "^2.0.12",
-    "prettier": "^2.3.2",
-    "rimraf": "^3.0.2",
-    "ts-node": "^10.2.1",
-    "typescript": "^4.3.5"
+    "@types/node": "18.7.18",
+    "@types/ws": "8.5.3",
+    "@typescript-eslint/eslint-plugin": "5.38.0",
+    "@typescript-eslint/parser": "5.38.0",
+    "eslint": "8.23.1",
+    "eslint-config-airbnb-base": "15.0.0",
+    "eslint-config-airbnb-typescript": "17.0.0",
+    "eslint-config-prettier": "8.5.0",
+    "eslint-import-resolver-typescript": "3.5.1",
+    "eslint-plugin-import": "2.26.0",
+    "eslint-plugin-prettier": "4.2.1",
+    "prettier": "2.7.1",
+    "rimraf": "3.0.2",
+    "ts-node": "10.9.1",
+    "typescript": "4.8.3"
   },
   "lint-staged": {
     "*.{js,ts,jsx,tsx}": [
@@ -57,12 +62,5 @@
     "hooks": {
       "pre-commit": "lint-staged"
     }
-  },
-  "nodemonConfig": {
-    "watch": [
-      ".env",
-      "src/*.*",
-      "examples/*.*"
-    ]
   }
 }
