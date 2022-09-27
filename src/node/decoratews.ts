@@ -97,7 +97,12 @@ export default class QWebSocketServer extends WebSocket.Server {
    * Override handling of WebSocket upgrade process.
    * If route is valid, handle connection and emit open event.
    */
-  async handleUpgrade(req: DecoratedIncomingMessage, socket: Duplex, head: Buffer, callback: (ws, request) => void): Promise<void> {
+  async handleUpgrade(
+    req: DecoratedIncomingMessage,
+    socket: Duplex,
+    head: Buffer,
+    callback: (ws, request) => void,
+  ): Promise<void> {
     // check if pre-connect middleware is set
     if (this.beforeConnectCallback) {
       const shouldUpgrade = await this.beforeConnectCallback(req, req.params);

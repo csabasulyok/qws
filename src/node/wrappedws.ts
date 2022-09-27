@@ -1,7 +1,14 @@
 import autoBind from 'auto-bind';
 import WebSocket, { MessageEvent, ClientOptions } from 'ws';
 
-import { QwsMessage, AckQwsMessage, BinaryQwsMessage, ErrorQwsMessage, JsonQwsMessage, ReadyQwsMessage } from '../common/message';
+import {
+  QwsMessage,
+  AckQwsMessage,
+  BinaryQwsMessage,
+  ErrorQwsMessage,
+  JsonQwsMessage,
+  ReadyQwsMessage,
+} from '../common/message';
 import { deserializeMessage, serializeMessage } from './messageencode';
 import { Binary } from '../common/discriminator';
 
