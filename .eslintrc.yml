@@ -35,7 +35,7 @@ rules:
   complexity: ['error', 16]
   class-methods-use-this: 0
   arrow-parens: ['error', 'always']
-  require-await: ['error']
+  require-await: 0
   import/extensions: ['error', { 'ts': 'never' }]
   import/no-unresolved: error
   lines-between-class-members: ['error', 'always', { 'exceptAfterSingleLine': true }]
