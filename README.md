@@ -10,6 +10,8 @@ Safe queueing with auto-reconnect for WebSockets
 - Configurable headers per message, even when body is binary
 - Simple message routing (via [route-recognizer](https://github.com/tildeio/route-recognizer))
 
+Since version 2, `qws-node` is an ES module only (no CommonJS build) and requires Node.js 24+.
+
 # Examples
 
 TODO

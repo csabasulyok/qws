@@ -1,22 +1,19 @@
-import { IncomingMessage } from 'http';
-import { Duplex } from 'stream';
-import { promisify } from 'util';
-import WebSocket, { ServerOptions } from 'ws';
+import { IncomingMessage } from 'node:http';
+import { Duplex } from 'node:stream';
+import { promisify } from 'node:util';
+import { WebSocket, WebSocketServer, ServerOptions } from 'ws';
 import autoBind from 'auto-bind';
-import RouteRecognizer from 'route-recognizer';
-
-import QWebSocket from '../common/queuews';
-import { QwsParams } from '../common/message';
-import logger from '../common/logger';
+import RouteRecognizer from '../common/router.js';
+import QWebSocket from '../common/queuews.js';
+import { QwsParams } from '../common/message.js';
+import logger from '../common/logger.js';
 
 /**
  * Path parameters of routing
  * amended with query string
  */
 export type QwsUrlParams = QwsParams & {
-  queryParams: {
-    [key: string]: string;
-  };
+  queryParams: Record<string, string>;
 };
 
 /**
@@ -26,7 +23,7 @@ export type ConnectionCallback = (
   qws: QWebSocket,
   params?: QwsUrlParams,
   req?: IncomingMessage,
-) => void | number | Promise<void> | Promise<number>;
+) => void | number | Promise<void> | Promise<number>; // eslint-disable-line @typescript-eslint/no-invalid-void-type
 
 /**
  * Middleware callback function type
@@ -47,7 +44,7 @@ type DecoratedIncomingMessage = IncomingMessage & {
  * Allows building up QWebSocket objects on connect.
  * Allows simple routing via the route-recognizer package.
  */
-export default class QWebSocketServer extends WebSocket.Server {
+export default class QWebSocketServer extends WebSocketServer {
   /**
    * routes for callbacks
    */
@@ -80,13 +77,14 @@ export default class QWebSocketServer extends WebSocket.Server {
     }
     // check if route exists
     const routeResults = this.router.recognize(req.url || '/');
-    if (!routeResults) {
+    const route = routeResults?.[0];
+    if (!route) {
       return false;
     }
     // save handler and params
-    req.handler = routeResults[0].handler as ConnectionCallback;
+    req.handler = route.handler as ConnectionCallback;
     req.params = {
-      ...routeResults[0].params,
+      ...route.params,
       queryParams: routeResults.queryParams,
     } as QwsUrlParams;
 
@@ -115,7 +113,7 @@ export default class QWebSocketServer extends WebSocket.Server {
 
     super.handleUpgrade(req, socket, head, (ws, request) => {
       try {
-        const name = new URL(req.url, `http://${req.headers.host}`).pathname;
+        const name = new URL(req.url ?? '/', `http://${req.headers.host}`).pathname;
         const qws = new QWebSocket(ws, {
           name,
           reconnect: false, // do not reconnect on server-side
@@ -138,9 +136,9 @@ export default class QWebSocketServer extends WebSocket.Server {
         // re-emit open event, since original consumed by express-ws
         // this will trigger the callback correctly
         ws.emit('open');
-      } catch (err) {
-        logger.error(err);
-        throw err;
+      } catch (error) {
+        logger.error(error);
+        throw error;
       }
     });
   }
@@ -172,7 +170,7 @@ export default class QWebSocketServer extends WebSocket.Server {
 
   async closeAsync(): Promise<void> {
     // take all qws through super client mapping, and close them
-    await Promise.all([...this.clients].map((ws) => this.wsToQws.get(ws)?.close()));
+    await Promise.all([...this.clients].map(async (ws) => this.wsToQws.get(ws)?.close()));
     // promisify original close method
     const closeP = promisify(this.close.bind(this));
     await closeP();

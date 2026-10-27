@@ -13,13 +13,10 @@
     "forceConsistentCasingInFileNames": true,
     "importHelpers": false,
     "incremental": true,
-    "isolatedModules": false,
-    "lib": [
-      "ScriptHost",
-      "ES2020"
-    ],
-    "module": "CommonJS",
-    "moduleResolution": "node",
+    "isolatedModules": true,
+    "lib": ["ScriptHost", "esnext"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "noEmit": false,
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": false,
@@ -34,24 +31,16 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "sourceMap": true,
-    "strict": false,
+    "strict": true,
     "strictBindCallApply": true,
     "strictFunctionTypes": true,
-    "strictNullChecks": false,
+    "strictNullChecks": true,
     "strictPropertyInitialization": false,
     "stripInternal": true,
-    "target": "ES2019",
-    "types": [
-      "node"
-    ],
+    "target": "ESNext",
+    "types": ["node"],
     "useDefineForClassFields": false
   },
-  "include": [
-    "src/**/*.ts",
-    "examples/**/*.ts",
-    "typings.d.ts"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["src/**/*.ts", "examples/**/*.ts", "typings.d.ts"],
+  "exclude": ["node_modules"]
 }
