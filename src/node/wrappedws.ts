@@ -1,6 +1,5 @@
 import autoBind from 'auto-bind';
-import WebSocket, { MessageEvent, ClientOptions } from 'ws';
-
+import { WebSocket, MessageEvent, ClientOptions } from 'ws';
 import {
   QwsMessage,
   AckQwsMessage,
@@ -8,9 +7,9 @@ import {
   ErrorQwsMessage,
   JsonQwsMessage,
   ReadyQwsMessage,
-} from '../common/message';
-import { deserializeMessage, serializeMessage } from './messageencode';
-import { Binary } from '../common/discriminator';
+} from '../common/message.js';
+import { deserializeMessage, serializeMessage } from './messageencode.js';
+import { Binary } from '../common/discriminator.js';
 
 /**
  * Wrapper around WebSocket, built to serialize/deserialize
@@ -36,12 +35,12 @@ export default class WrappedWebSocket {
       this.ws = new WebSocket(wsOrUrl, opts);
     }
 
-    this.ws.onmessage = async (event: MessageEvent) => {
+    this.ws.addEventListener('message', async (event: MessageEvent) => {
       const message = await deserializeMessage(event.data as Buffer);
       // logger.info('WRAPPER received', message);
       const callback = this.callbacks[message.headers.type] as (msg: QwsMessage) => void;
       callback?.(message);
-    };
+    });
 
     autoBind(this);
   }
@@ -51,15 +50,15 @@ export default class WrappedWebSocket {
    */
 
   onWsOpen(callback: () => void): void {
-    this.ws.onopen = callback;
+    this.ws.addEventListener('open', callback);
   }
 
   onWsClose(callback: () => void): void {
-    this.ws.onclose = callback;
+    this.ws.addEventListener('close', callback);
   }
 
   onWsError(callback: (event: unknown) => void): void {
-    this.ws.onerror = callback;
+    this.ws.addEventListener('error', callback);
   }
 
   /**

@@ -1,12 +1,9 @@
-import QWebSocket from './common/queuews';
-import QWebSocketServer from './node/decoratews';
+export * from './common/logger.js';
+export * from './common/message.js';
+export * from './common/queuews.js';
+export * from './node/messageencode.js';
+export * from './node/decoratews.js';
 
-export * from './common/logger';
-export * from './common/message';
-export * from './common/queuews';
-export * from './node/messageencode';
-export * from './node/decoratews';
+export { default } from './common/queuews.js';
 
-export { QWebSocketServer };
-
-export default QWebSocket;
+export { default as QWebSocketServer } from './node/decoratews.js';

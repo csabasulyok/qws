@@ -1,4 +1,4 @@
-import QWebSocket from '../src';
+import QWebSocket from '../src/index.js';
 
 const name = process.argv[2] || 'default';
 const qws = new QWebSocket(`ws://localhost:3000/mypath/${name}`);
