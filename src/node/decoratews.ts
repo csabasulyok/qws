@@ -4,7 +4,7 @@ import { promisify } from 'node:util';
 import { WebSocket, WebSocketServer, ServerOptions } from 'ws';
 import autoBind from 'auto-bind';
 import RouteRecognizer from '../common/router.js';
-import QWebSocket from '../common/queuews.js';
+import QWebSocket, { QWebSocketOptions } from '../common/queuews.js';
 import { QwsParams } from '../common/message.js';
 import logger from '../common/logger.js';
 
@@ -60,8 +60,14 @@ export default class QWebSocketServer extends WebSocketServer {
    */
   private wsToQws: Map<WebSocket, QWebSocket>;
 
-  constructor(options?: ServerOptions) {
+  /**
+   * Options for the QWebSocket of each incoming connection (e.g. heartbeatIntervalMillis)
+   */
+  private qwsOptions: QWebSocketOptions;
+
+  constructor(options?: ServerOptions, qwsOptions: QWebSocketOptions = {}) {
     super(options);
+    this.qwsOptions = qwsOptions;
     this.router = new RouteRecognizer();
     this.wsToQws = new Map<WebSocket, QWebSocket>();
     autoBind(this);
@@ -115,6 +121,7 @@ export default class QWebSocketServer extends WebSocketServer {
       try {
         const name = new URL(req.url ?? '/', `http://${req.headers.host}`).pathname;
         const qws = new QWebSocket(ws, {
+          ...this.qwsOptions,
           name,
           reconnect: false, // do not reconnect on server-side
         });

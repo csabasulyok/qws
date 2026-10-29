@@ -100,7 +100,9 @@ export function serializeMessage(message: QwsMessage): Buffer {
     }
     case 'ready':
     case 'ack':
-    case 'err': {
+    case 'err':
+    case 'ping':
+    case 'pong': {
       // no body
       break;
     }
@@ -122,7 +124,9 @@ export function serializeMessage(message: QwsMessage): Buffer {
     }
     case 'ready':
     case 'ack':
-    case 'err': {
+    case 'err':
+    case 'ping':
+    case 'pong': {
       // no body
       break;
     }
